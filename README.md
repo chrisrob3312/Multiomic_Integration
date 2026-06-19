@@ -69,15 +69,26 @@ source("01_mofa_overall.R")
 source("02_mofa_mrd_stratified.R")
 source("03_lucidus_mediation.R")
 source("04_hima_survival.R")
+source("05_plots.R")                 # forest plots, KM, factor scatters, heatmaps
+source("06_annotation.R")            # CpG→gene, RNA GSEA, CNV→B-ALL drivers
 # optional:
 source("99_diablo_optional.R")
 ```
+
+## Outputs
+
+- `results/*.csv` — per-script tidy tables (Cox, multinomial, ordinal, logistic, association, HIMA mediators, loading summaries)
+- `results/*.rds` — MOFA fits, LUCIDus fits, raw HIMA outputs (for re-plotting)
+- `results/plots/*.pdf` — forest plots, KM curves (overall + by ancestry), factor scatters, ancestry × ADI risk heatmap, HIMA top-mediator bars
+- `results/06_*` — annotated loadings (methylation CpG→gene, RNA GSEA Hallmark, CNV B-ALL driver overlay)
 
 ## Package install (one-time)
 
 ```r
 install.packages(c("BiocManager", "survival", "glmnet", "ggplot2",
                    "dplyr", "tidyr", "nnet", "MASS",
-                   "LUCIDus", "mixOmics", "HIMA"))
-BiocManager::install(c("MOFA2"))
+                   "LUCIDus", "mixOmics", "HIMA",
+                   "msigdbr"))
+BiocManager::install(c("MOFA2", "fgsea", "minfi",
+                       "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"))
 ```
