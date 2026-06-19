@@ -1,9 +1,16 @@
 # REDIAL multi-omics integration
 
-Two-tool stack for the REDIAL pediatric B-ALL cohort: **MOFA2** for unsupervised
-subtyping and survival-aware factor discovery, **LUCIDus** for exposure → omics
-→ outcome quasi-mediation. **mixOmics DIABLO** is included as an optional
-supervised confirmatory script.
+Two-tool primary stack plus two mediation arms for the REDIAL pediatric B-ALL
+cohort.
+
+## Variable roles (lock these in)
+
+| Role | Variables |
+|---|---|
+| **Grouping** (MOFA structure) | `subtype` (overall and MRD-stratified runs) |
+| **Exposures** (predictors of factors / mediation upstream) | `ancestry` (Graf), `adi_q` (quartile), germline risk-variant burden |
+| **Outcomes** (functions of factors / mediation downstream) | `mrd_pos`, `relapse_category` (no / early / intermediate / late), `Surv(os_time, os_event)` |
+| **Residualized noise** (regressed out pre-MOFA) | `age`, `sex`, `blast%` |
 
 ## Pipeline
 
@@ -16,39 +23,42 @@ supervised confirmatory script.
        ┌──────────────────────────────────┼──────────────────────────────────┐
        ▼                                  ▼                                  ▼
  01_mofa_overall.R               02_mofa_mrd_stratified.R          03_lucidus_mediation.R
- group = relapse_category        MRD-neg / MRD-pos runs            germline burden / ADI /
- covariates: subtype, MRD,       group = tumor_subtype             ancestry → omics → relapse
-   ancestry, ADI, age, sex,      covariates: relapse, ancestry,
-   blast%                          ADI, age, sex, blast%
-       │                                  │                                  │
-       └────► Cox PH on factors for OS ◄──┘                                  │
-       └────► Factor regression on ancestry × ADI                            │
-       └────► High-risk vs low-risk clustering on factor scores              │
-                                                                             │
-                                  99_diablo_optional.R                       │
-                                  supervised confirmatory                    │
-                                  (run only if MOFA result is weak)          │
+ group = subtype                 MRD-neg / MRD-pos runs            quasi-mediation:
+ outcomes:                       group = subtype                   exposure → omics
+   - OS Cox PH                   outcomes:                            cluster → relapse
+   - relapse 4-level multinom      - OS Cox PH                     exposures: germline,
+   - nested relapsed→timing        - relapse 4-level                  ADI≥3, AMI ancestry
+   - MRD logit                     - MRD comparisons               
+ exposures:                                                        
+   - ancestry, ADI on factors                                      04_hima_survival.R
+                                                                   feature-level mediation
+                                                                   exposure → omics
+                                                                      features → OS Cox
+                                                                   FDR-controlled per modality
+                                                                  
+                                  99_diablo_optional.R
+                                  supervised confirmatory
+                                  Y = MOFA risk label or
+                                      relapse_category
+                                  (run only if MOFA is weak)
 ```
+
+## Tools and why
+
+| Script | Tool | Why |
+|---|---|---|
+| 01, 02 | **MOFA2** | Probabilistic factor model; handles block-missing modalities, mixed likelihoods, small-n strata; multi-group framework absorbs subtype heterogeneity so we avoid nested per-subtype refits. |
+| 03 | **LUCIDus 3.x** | Quasi-mediation with latent omics clusters between exposure and outcome; bootstrap inference; g-computation for causal effects. |
+| 04 | **HIMA** | Feature-level high-dimensional mediation with FDR; `hima_survival` for OS Cox outcome. Complements LUCIDus by naming *which* features mediate, where LUCIDus names *which clusters*. |
+| 99 | **mixOmics DIABLO** | Optional supervised confirmatory — runs only if MOFA risk-class separation is weak. |
 
 ## Modalities
 
 - methylation array (M-values, gaussian)
 - bulk RNA-seq (vst-transformed counts, gaussian)
 - tumor metabolome (log-scaled, gaussian)
-- RNA-derived CNV (log2 ratios, gaussian; binary calls optional)
-- germline risk-variant carrier status (bernoulli, used as **exposure** in LUCIDus, not as MOFA view)
-
-## Why this stack
-
-- **MOFA2** handles block-missing modalities natively, mixed likelihoods, and
-  small-n strata via a probabilistic Bayesian factor model with ARD priors.
-  The multi-group framework absorbs relapse-category / subtype structure so
-  nested stratification is minimized.
-- **LUCIDus 3.x** is the only mature R package for the quasi-mediation framing
-  we need (latent omics clusters between exposure and outcome) with bootstrap
-  inference and g-computation.
-- **DIABLO** is supervised — kept as an add-on, not the primary engine, because
-  it overfits below n ≈ 50/class.
+- RNA-derived CNV (log2 ratios, gaussian)
+- germline risk-variant carrier status (used as **exposure**, not as MOFA view)
 
 ## Run order
 
@@ -58,6 +68,7 @@ source("R/utils.R")                  # auto-sourced by all 0x_ scripts
 source("01_mofa_overall.R")
 source("02_mofa_mrd_stratified.R")
 source("03_lucidus_mediation.R")
+source("04_hima_survival.R")
 # optional:
 source("99_diablo_optional.R")
 ```
@@ -66,6 +77,7 @@ source("99_diablo_optional.R")
 
 ```r
 install.packages(c("BiocManager", "survival", "glmnet", "ggplot2",
-                   "dplyr", "tidyr", "LUCIDus", "mixOmics"))
+                   "dplyr", "tidyr", "nnet", "MASS",
+                   "LUCIDus", "mixOmics", "HIMA"))
 BiocManager::install(c("MOFA2"))
 ```
