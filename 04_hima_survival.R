@@ -19,10 +19,13 @@ if (!requireNamespace("HIMA", quietly = TRUE)) stop("install.packages('HIMA')")
 redial <- load_redial()
 cl <- redial$clinical
 
+## HIMA-survival takes a SCALAR exposure X. For germline, use the PRS (single
+## column) — for a multi-SNP entry, see LUCIDus (03), which is the natural
+## home for jointly-modeled SNP exposures.
 exposures <- list(
-  germline_burden = redial$germline$burden,
-  adi_high        = as.integer(cl$adi_q >= 3),
-  ancestry_AMI    = as.integer(cl$ancestry == "AMI")
+  germline_prs = redial$germline$prs,
+  adi_high     = as.integer(cl$adi_q >= 3),
+  ancestry_AMI = as.integer(cl$ancestry == "AMI")
 )
 
 modalities <- redial$omics  # methylation / rna / metabolome / cnv

@@ -8,9 +8,45 @@ cohort.
 | Role | Variables |
 |---|---|
 | **Grouping** (MOFA structure) | `subtype` (overall and MRD-stratified runs) |
-| **Exposures** (predictors of factors / mediation upstream) | `ancestry` (Graf), `adi_q` (quartile), germline risk-variant burden |
+| **Exposures (for LUCIDus / HIMA — NOT in MOFA)** | `ancestry` (Graf), `adi_q` (quartile), **germline**: multi-SNP matrix over the curated risk-variant panel (primary), PRS, or burden count |
 | **Outcomes** (functions of factors / mediation downstream) | `mrd_pos`, `relapse_category` (no / early / intermediate / late), `Surv(os_time, os_event)` |
 | **Residualized noise** (regressed out pre-MOFA) | `age`, `sex`, `blast%` |
+
+### Germline encoding for LUCIDus G
+
+LUCIDus' `G` matrix accepts continuous OR categorical OR mixed columns. The
+"categorical" element in LUCIDus is the latent omics cluster `K`, not the
+exposure — so SNPs can enter as a multi-column dosage/carrier matrix.
+Three encodings are provided in `03_lucidus_mediation.R`:
+
+- `mode = "snps"` — N × 10 multi-column risk-variant carrier matrix (**primary**)
+- `mode = "prs"` — single weighted polygenic risk score column
+- `mode = "burden"` — single count of risk-panel carrier variants
+
+HIMA-survival expects a scalar `X` per run, so the germline arm in `04` uses
+the PRS column.
+
+### MOFA does not cluster
+
+MOFA produces *factor scores* per sample. Sample clustering (high-risk vs
+low-risk label) is a downstream **k-means on factor scores**, oriented by the
+clinical outcome of the run:
+
+- Script 01 (overall): clusters oriented by **OS**.
+- Script 02 (MRD-negative): clusters oriented by **relapse y/n** — the story
+  we care about is "which factor-loaded pathways drive relapse despite MRD
+  negativity."
+- Script 02 (MRD-positive): clusters oriented by **OS**.
+
+### Modalities (kept as separate MOFA views)
+
+- methylation array (gaussian M-values)
+- bulk RNA-seq (gaussian, vst-transformed)
+- tumor metabolome (gaussian, log-scaled)
+- **CNV from RNA-seq** — kept as its own MOFA view, distinct from the raw RNA
+  view, so the integration can ask whether copy-number-driven and
+  expression-driven signal are jointly or independently associated with
+  outcomes.
 
 ## Pipeline
 
@@ -51,14 +87,6 @@ cohort.
 | 03 | **LUCIDus 3.x** | Quasi-mediation with latent omics clusters between exposure and outcome; bootstrap inference; g-computation for causal effects. |
 | 04 | **HIMA** | Feature-level high-dimensional mediation with FDR; `hima_survival` for OS Cox outcome. Complements LUCIDus by naming *which* features mediate, where LUCIDus names *which clusters*. |
 | 99 | **mixOmics DIABLO** | Optional supervised confirmatory — runs only if MOFA risk-class separation is weak. |
-
-## Modalities
-
-- methylation array (M-values, gaussian)
-- bulk RNA-seq (vst-transformed counts, gaussian)
-- tumor metabolome (log-scaled, gaussian)
-- RNA-derived CNV (log2 ratios, gaussian)
-- germline risk-variant carrier status (used as **exposure**, not as MOFA view)
 
 ## Run order
 

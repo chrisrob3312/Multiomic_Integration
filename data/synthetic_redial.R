@@ -70,16 +70,38 @@ omics$metabolome[miss_metab, ] <- NA
 miss_cnv <- sample(seq_len(N), round(0.05 * N))
 omics$cnv[miss_cnv, ] <- NA
 
-## Germline carrier matrix — used as exposure in LUCIDus, not as MOFA view.
+## Germline carrier matrix — used as exposure in LUCIDus and HIMA, not as MOFA view.
+## REAL DATA: replace with your imputed/called SNP genotypes (0/1/2 dosage or
+## 0/1 carrier) over your curated B-ALL risk-variant list (IKZF1, ARID5B,
+## GATA3, CEBPE, PIP4K2A, BMI1-PIP4K2A locus, etc.).
 germline <- matrix(rbinom(N * P$germline, 1, 0.10), N, P$germline)
 colnames(germline) <- paste0("rs", seq_len(P$germline))
 rownames(germline) <- clinical$sample_id
-germline_burden <- rowSums(germline)
+
+## Make first 10 SNPs the "risk-variant panel" — boost their carrier frequency
+## in high-lp samples so the toy LUCIDus / HIMA runs find signal.
+risk_panel <- paste0("rs", 1:10)
+for (s in risk_panel) {
+  bump <- rbinom(N, 1, plogis(risk_lp - 1.0))
+  germline[, s] <- pmax(germline[, s], bump)
+}
+
+germline_burden <- rowSums(germline[, risk_panel])  # count of risk-panel variants
+## Polygenic risk score: linear combo of all 40 SNPs with random effect sizes
+## biased so the first 10 carry positive risk-aligned weights.
+beta_prs <- rnorm(P$germline, 0, 0.2)
+beta_prs[1:10] <- abs(beta_prs[1:10]) + 0.3
+germline_prs <- as.numeric(germline %*% beta_prs)
 
 redial <- list(
   clinical = clinical,
-  omics    = omics,
-  germline = list(matrix = germline, burden = germline_burden)
+  omics    = omics,  # methylation, rna, metabolome, cnv (CNV is from RNA-seq, separate MOFA view)
+  germline = list(
+    matrix     = germline,        # N x 40 carrier matrix (all SNPs)
+    risk_panel = risk_panel,      # column names of curated risk-variant SNPs (top 10)
+    burden     = germline_burden, # sum over risk_panel
+    prs        = germline_prs     # weighted PRS over all SNPs
+  )
 )
 
 dir.create("data", showWarnings = FALSE)
