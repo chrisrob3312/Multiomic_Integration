@@ -99,9 +99,59 @@ source("03_lucidus_mediation.R")
 source("04_hima_survival.R")
 source("05_plots.R")                 # forest plots, KM, factor scatters, heatmaps
 source("06_annotation.R")            # CpG→gene, RNA GSEA, CNV→B-ALL drivers
+source("07_convergence.R")           # MOFA factors ↔ LUCIDus clusters + driver tagging
 # optional:
 source("99_diablo_optional.R")
 ```
+
+## Pediatric B-ALL molecular subtypes (canonical, used in `subtype` column)
+
+| Risk tier | Subtype | Token used in `redial$clinical$subtype` |
+|---|---|---|
+| Favorable | ETV6::RUNX1 (t(12;21)) | `ETV6_RUNX1` |
+| Favorable | High hyperdiploid (>50 chr) | `HighHyperdiploid` |
+| Favorable | DUX4-rearranged / ERG-deregulated | `DUX4r` |
+| Intermediate | TCF3::PBX1 (t(1;19)) | `TCF3_PBX1` |
+| Intermediate | MEF2D-rearranged | `MEF2Dr` |
+| Intermediate | ZNF384-rearranged | `ZNF384r` |
+| Intermediate | NUTM1-rearranged | `NUTM1r` |
+| Intermediate | PAX5alt (P80R, other) | `PAX5alt` |
+| Intermediate | IKZF1 N159Y | `IKZF1_N159Y` |
+| Intermediate | ETV6::RUNX1-like | `ETV6_RUNX1_like` |
+| Adverse | BCR::ABL1 (Ph+, t(9;22)) | `BCR_ABL1` |
+| Adverse | Ph-like, CRLF2-r | `Ph_like_CRLF2` |
+| Adverse | Ph-like, JAK2 / EPOR | `Ph_like_JAK2` |
+| Adverse | Ph-like, ABL-class | `Ph_like_ABLclass` |
+| Adverse | KMT2A-rearranged (formerly MLL) | `KMT2Ar` |
+| Adverse | iAMP21 | `iAMP21` |
+| Very high | Low hypodiploid / near-haploid | `LowHypodiploid` |
+| Residual | B-other / NOS | `Bother` |
+
+Use these tokens in `redial$clinical$subtype` for consistent grouping. Real
+data: call subtypes from RNA-seq using ALLCatchR or ALLSorts, then merge.
+
+## Driver discovery / sanity check
+
+`07_convergence.R` answers three questions:
+
+1. **Convergence**: do the MOFA factors driving OS (Cox PH) and relapse y/n
+   (logistic) correlate with the LUCIDus latent omics clusters mediating
+   exposure → relapse? Same biology, two angles → confidence boost.
+2. **Sanity check**: in the high-risk-driving MOFA factors, which top-loading
+   features are on the canonical pediatric B-ALL driver list (IKZF1, PAX5,
+   CDKN2A/B, KMT2A, JAK2, CRLF2, EBF1, BCR/ABL1, …)? Recovery of known
+   drivers in the toy / real data confirms the pipeline is working.
+3. **Candidate novel drivers**: top-loading features NOT on the canonical
+   list → flagged as `candidate_novel`. Outputs include per-(factor, modality)
+   tables of known vs candidate, ranked by absolute loading.
+
+Cross-tool corroboration: candidate features that ALSO show up as
+high-coefficient LUCIDus Z-coefs in the relapse-associated cluster are the
+strongest novel-driver candidates — `07_mofa_lucid_feature_overlap.csv`.
+
+To take a candidate forward you'd want orthogonal evidence: variant calls
+(GATK/Strelka2 on RNA-seq or WGS), fusion calls (Arriba, STAR-Fusion), CNV
+breakpoints from paired DNA, and ideally functional follow-up.
 
 ## Outputs
 

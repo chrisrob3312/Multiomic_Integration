@@ -10,20 +10,40 @@ P <- list(methylation = 500, rna = 800, metabolome = 150, cnv = 300, germline = 
 ancestry <- sample(c("EUR", "AMR", "AFR", "AMI"),
                    N, replace = TRUE, prob = c(0.35, 0.40, 0.10, 0.15))
 adi_q    <- sample(1:4, N, replace = TRUE)
-subtype  <- sample(c("ETV6_RUNX1", "HighHyperdiploid", "BCR_ABL1_like",
-                     "DUX4", "Bother"),
-                  N, replace = TRUE, prob = c(0.25, 0.25, 0.15, 0.15, 0.20))
+subtype  <- sample(
+  c("ETV6_RUNX1", "HighHyperdiploid", "DUX4r", "TCF3_PBX1",
+    "BCR_ABL1", "Ph_like_CRLF2", "Ph_like_JAK2", "Ph_like_ABLclass",
+    "KMT2Ar", "LowHypodiploid", "iAMP21",
+    "MEF2Dr", "ZNF384r", "NUTM1r", "PAX5alt", "IKZF1_N159Y",
+    "ETV6_RUNX1_like", "Bother"),
+  N, replace = TRUE,
+  prob = c(0.18, 0.18, 0.06, 0.04,
+           0.03, 0.04, 0.02, 0.02,
+           0.03, 0.02, 0.02,
+           0.03, 0.02, 0.01, 0.04, 0.02,
+           0.04, 0.20)
+)
 mrd_pos  <- rbinom(N, 1, 0.30)
 age      <- round(runif(N, 1, 18), 1)
 sex      <- sample(c("F", "M"), N, replace = TRUE)
 blast    <- round(runif(N, 60, 99), 1)
 
 ## Relapse category — biased by MRD and ancestry to make the toy run nontrivial.
+## Subtype risk weight — broadly tracks the literature:
+##   established adverse (Ph+, Ph-like, KMT2A-r, low hypodiploid, TCF3::HLF,
+##   iAMP21) > intermediate > favorable (ETV6::RUNX1, HeH, DUX4r).
+subtype_risk <- c(
+  ETV6_RUNX1 = -0.4, HighHyperdiploid = -0.4, DUX4r = -0.2, TCF3_PBX1 = 0.0,
+  BCR_ABL1   =  0.6, Ph_like_CRLF2    =  0.6, Ph_like_JAK2 = 0.6,
+  Ph_like_ABLclass = 0.6, KMT2Ar = 0.6, LowHypodiploid = 0.8, iAMP21 = 0.5,
+  MEF2Dr =  0.2, ZNF384r =  0.0, NUTM1r = -0.3, PAX5alt =  0.2,
+  IKZF1_N159Y = 0.2, ETV6_RUNX1_like = -0.1, Bother = 0.0
+)
 risk_lp <- 0.6 * mrd_pos +
            0.4 * (ancestry == "AMI") +
            0.3 * (ancestry == "AMR") +
            0.3 * (adi_q >= 3) +
-           0.2 * (subtype == "BCR_ABL1_like")
+           subtype_risk[subtype]
 p_relapse <- plogis(risk_lp - 0.5)
 relapsed  <- rbinom(N, 1, p_relapse)
 relapse_category <- ifelse(relapsed == 0, "no_relapse",

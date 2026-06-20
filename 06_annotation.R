@@ -98,9 +98,27 @@ annot_metabolome <- function(df) {
 }
 
 ## ---- CNV: cytoband + B-ALL driver overlay ---------------------------------
-BALL_DRIVERS <- c("IKZF1", "PAX5", "CDKN2A", "CDKN2B", "ETV6", "RUNX1",
-                  "TP53", "TCF3", "PBX1", "MLL", "KMT2A", "BCR", "ABL1",
-                  "JAK2", "CRLF2", "IL7R", "CREBBP", "EBF1", "RB1", "BTG1")
+## Recurrent pediatric B-ALL drivers (CNV / SNV / fusion). Used to tag top
+## MOFA-loading and LUCIDus-cluster features as KNOWN driver vs CANDIDATE.
+BALL_DRIVERS <- c(
+  ## Transcription factors / lineage
+  "IKZF1", "PAX5", "EBF1", "ETV6", "RUNX1", "TCF3", "PBX1", "HLF",
+  "MEF2D", "ZNF384", "NUTM1", "DUX4", "ERG",
+  ## Tumor suppressors / cell cycle
+  "CDKN2A", "CDKN2B", "RB1", "TP53", "BTG1",
+  ## Kinase signaling (Ph / Ph-like)
+  "BCR", "ABL1", "ABL2", "JAK1", "JAK2", "JAK3", "CRLF2", "EPOR",
+  "CSF1R", "PDGFRB", "PDGFRA", "FLT3", "NTRK3", "IL7R", "SH2B3",
+  ## RAS / PI3K
+  "KRAS", "NRAS", "PTPN11", "NF1", "BRAF", "PIK3CA", "PIK3R1",
+  ## Epigenetic / chromatin
+  "KMT2A", "CREBBP", "SETD2", "EZH2", "WHSC1", "NSD2", "ARID1A",
+  "EED", "SUZ12",
+  ## Splicing / RNA processing
+  "SF3B1", "SRSF2", "U2AF1", "DDX3X",
+  ## Other recurrent
+  "TBL1XR1", "FBXW7", "WT1", "PTEN"
+)
 annot_cnv <- function(df) {
   df$is_BALL_driver <- df$feature %in% BALL_DRIVERS
   write.csv(df, file.path(PATHS$results, "06_cnv_top_with_drivers.csv"), row.names = FALSE)
