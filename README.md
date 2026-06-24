@@ -100,6 +100,7 @@ source("04_hima_survival.R")
 source("05_plots.R")                 # forest plots, KM, factor scatters, heatmaps
 source("06_annotation.R")            # CpG→gene, RNA GSEA, CNV→B-ALL drivers
 source("07_convergence.R")           # MOFA factors ↔ LUCIDus clusters + driver tagging
+source("08_drug_repurposing.R")      # DGIdb + Open Targets + LINCS L1000 signature query
 # optional:
 source("99_diablo_optional.R")
 ```
@@ -166,7 +167,8 @@ breakpoints from paired DNA, and ideally functional follow-up.
 install.packages(c("BiocManager", "survival", "glmnet", "ggplot2",
                    "dplyr", "tidyr", "nnet", "MASS",
                    "LUCIDus", "mixOmics", "HIMA",
-                   "msigdbr"))
+                   "msigdbr", "httr", "jsonlite"))
 BiocManager::install(c("MOFA2", "fgsea", "minfi",
-                       "IlluminaHumanMethylationEPICanno.ilm10b4.hg19"))
+                       "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
+                       "signatureSearch", "signatureSearchData"))
 ```
