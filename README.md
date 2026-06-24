@@ -163,12 +163,25 @@ breakpoints from paired DNA, and ideally functional follow-up.
 
 ## Package install (one-time)
 
-```r
-install.packages(c("BiocManager", "survival", "glmnet", "ggplot2",
-                   "dplyr", "tidyr", "nnet", "MASS",
-                   "LUCIDus", "mixOmics", "HIMA",
-                   "msigdbr", "httr", "jsonlite"))
-BiocManager::install(c("MOFA2", "fgsea", "minfi",
-                       "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
-                       "signatureSearch", "signatureSearchData"))
+Run the bundled setup script on an interactive HPC node inside screen/tmux —
+the install can take 30-90 min on a fresh R, and signatureSearchData adds a
+~7-15 GB LINCS reference download on top.
+
+```bash
+screen -S redial-install        # or: tmux new -s redial-install
+module load R/4.4               # whatever your cluster uses
+bash setup/install.sh
+# ctrl-a d   # to detach screen; reattach later with: screen -r redial-install
 ```
+
+Useful env vars:
+
+```bash
+REDIAL_SKIP_LINCS=1 bash setup/install.sh        # skip the huge LINCS data
+REDIAL_USER_LIB=$HOME/R/redial bash setup/install.sh   # user library
+REDIAL_NCPUS=8 bash setup/install.sh             # cap parallel workers
+```
+
+The script is idempotent — re-run after a partial failure and it only
+reinstalls what's missing. Log lands in `setup/install.log`. Full package
+list and what each one is for is in `setup/install_packages.R`.
